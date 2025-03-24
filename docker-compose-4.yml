@@ -27,7 +27,7 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    entrypoint: ["bash", "-c", "rabbitmqadmin -H rabbitmq -u $RABBIT_MQ_USERNAME -p $RABBIT_MQ_PASSWORD declare exchange name=$RABBIT_MQ_TASKS_EXCHANGE_NAME type=direct"]
+    entrypoint: ["bash", "-c", "rabbitmqadmin -H rabbitmq -u $RABBIT_MQ_USERNAME -p $RABBIT_MQ_PASSWORD declare exchange name=$RABBIT_MQ_TASK_EXCHANGE_NAME type=direct"]
 
   rabbitmq_setup_results:
     image: rabbitmq:management
@@ -38,7 +38,7 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-    entrypoint: ["bash", "-c", "rabbitmqadmin -H rabbitmq -u $RABBIT_MQ_USERNAME -p $RABBIT_MQ_PASSWORD declare exchange name=$RABBIT_MQ_RESULTS_EXCHANGE_NAME type=direct"]
+    entrypoint: ["bash", "-c", "rabbitmqadmin -H rabbitmq -u $RABBIT_MQ_USERNAME -p $RABBIT_MQ_PASSWORD declare exchange name=$RABBIT_MQ_RESULT_EXCHANGE_NAME type=direct"]
 
   mongo1:
     image: mongo:8
