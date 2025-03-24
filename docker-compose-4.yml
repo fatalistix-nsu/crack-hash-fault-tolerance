@@ -1,0 +1,206 @@
+services:
+
+  rabbitmq:
+    image: rabbitmq:management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    env_file:
+      ./.env
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBIT_MQ_USERNAME}
+      - RABBITMQ_DEFAULT_PASS=${RABBIT_MQ_PASSWORD}
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - crack_hash_fault_tolerance_net
+
+  rabbitmq_setup_tasks:
+    image: rabbitmq:management
+    env_file:
+      ./.env
+    networks:
+      - crack_hash_fault_tolerance_net
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    entrypoint: ["bash", "-c", "rabbitmqadmin -H rabbitmq -u $RABBIT_MQ_USERNAME -p $RABBIT_MQ_PASSWORD declare exchange name=$RABBIT_MQ_TASKS_EXCHANGE_NAME type=direct"]
+
+  rabbitmq_setup_results:
+    image: rabbitmq:management
+    env_file:
+      ./.env
+    networks:
+      - crack_hash_fault_tolerance_net
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    entrypoint: ["bash", "-c", "rabbitmqadmin -H rabbitmq -u $RABBIT_MQ_USERNAME -p $RABBIT_MQ_PASSWORD declare exchange name=$RABBIT_MQ_RESULTS_EXCHANGE_NAME type=direct"]
+
+  mongo1:
+    image: mongo:8
+    container_name: mongo1
+    command: ["mongod", "--replSet", "rs0"]
+    ports:
+      - "27017:27017"
+    networks:
+      - crack_hash_fault_tolerance_net
+    volumes:
+      - mongo1_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.runCommand('ping').ok"]
+      interval: 5s
+      retries: 5
+      start_period: 10s
+
+  mongo2:
+    image: mongo:8
+    container_name: mongo2
+    command: ["mongod", "--replSet", "rs0"]
+    ports:
+      - "27018:27017"
+    networks:
+      - crack_hash_fault_tolerance_net
+    volumes:
+      - mongo2_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.runCommand('ping').ok"]
+      interval: 5s
+      retries: 5
+      start_period: 10s
+
+  mongo3:
+    image: mongo:8
+    container_name: mongo3
+    command: ["mongod", "--replSet", "rs0"]
+    ports:
+      - "27019:27017"
+    networks:
+      - crack_hash_fault_tolerance_net
+    volumes:
+      - mongo3_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.runCommand('ping').ok"]
+      interval: 5s
+      retries: 5
+      start_period: 10s
+
+  mongo_setup:
+    image: mongo:8
+    networks:
+      - crack_hash_fault_tolerance_net
+    depends_on:
+      mongo1:
+        condition: service_healthy
+      mongo2:
+        condition: service_healthy
+      mongo3:
+        condition: service_healthy
+    entrypoint: [ "mongosh", "--host", "mongo1", "--eval", "rs.initiate({_id: 'rs0', members: [{ _id: 0, host: 'mongo1:27017' }, { _id: 1, host: 'mongo2:27017' }, { _id: 2, host: 'mongo3:27017' }]})" ]
+
+  manager:
+    build:
+      context: ./crack-hash-manager/
+      dockerfile: ./Dockerfile
+    deploy:
+      replicas: 1
+    ports:
+      - "${MANAGER_PORT}:${MANAGER_PORT}"
+    env_file:
+      ./.env
+    networks:
+      - crack_hash_fault_tolerance_net
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail http://localhost:${MANAGER_PORT}/health || exit 1"]
+      interval: 5s
+      retries: 3
+      timeout: 10s
+
+  worker_1:
+    build:
+      context: ./crack-hash-worker/
+      dockerfile: ./Dockerfile
+    deploy:
+      replicas: 1
+    environment:
+      MANAGER_ADDRESS: manager:${MANAGER_PORT}
+      WORKER_GOROUTINE_COUNT: 2
+      GOMAXPROCS: 2
+      GOMEMLIMIT: 1GiB
+    ports:
+      - "6970:6970"
+    networks:
+      - crack_hash_fault_tolerance_net
+    depends_on:
+      manager:
+        condition: service_healthy
+
+  worker_2:
+    build:
+      context: ./crack-hash-worker/
+      dockerfile: ./Dockerfile
+    deploy:
+      replicas: 1
+    environment:
+      MANAGER_ADDRESS: manager:${MANAGER_PORT}
+      WORKER_GOROUTINE_COUNT: 2
+      GOMAXPROCS: 2
+      GOMEMLIMIT: 1GiB
+    ports:
+      - "6971:6970"
+    networks:
+      - crack_hash_fault_tolerance_net
+    depends_on:
+      manager:
+        condition: service_healthy
+
+  worker_3:
+    build:
+      context: ./crack-hash-worker/
+      dockerfile: ./Dockerfile
+    deploy:
+      replicas: 1
+    environment:
+      MANAGER_ADDRESS: manager:${MANAGER_PORT}
+      WORKER_GOROUTINE_COUNT: 2
+      GOMAXPROCS: 2
+      GOMEMLIMIT: 1GiB
+    ports:
+      - "6972:6970"
+    networks:
+      - crack_hash_fault_tolerance_net
+    depends_on:
+      manager:
+        condition: service_healthy
+
+  worker_4:
+    build:
+      context: ./crack-hash-worker/
+      dockerfile: ./Dockerfile
+    deploy:
+      replicas: 1
+    environment:
+      MANAGER_ADDRESS: manager:${MANAGER_PORT}
+      WORKER_GOROUTINE_COUNT: 2
+      GOMAXPROCS: 2
+      GOMEMLIMIT: 1GiB
+    ports:
+      - "6973:6970"
+    networks:
+      - crack_hash_fault_tolerance_net
+    depends_on:
+      manager:
+        condition: service_healthy
+
+networks:
+  crack_hash_fault_tolerance_net:
+    driver: bridge
+    name: crack_hash_fault_tolerance
+
+volumes:
+  mongo1_data:
+  mongo2_data:
+  mongo3_data:
