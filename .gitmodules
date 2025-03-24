@@ -1,0 +1,6 @@
+[submodule "crack-hash-fault-tolerance-worker"]
+	path = crack-hash-fault-tolerance-worker
+	url = https://github.com/fatalistix-nsu/crack-hash-fault-tolerance-worker
+[submodule "crack-hash-fault-tolerance-manager"]
+	path = crack-hash-fault-tolerance-manager
+	url = https://github.com/fatalistix-nsu/crack-hash-fault-tolerance-manager
