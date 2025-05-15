@@ -2,6 +2,7 @@ services:
 
   rabbitmq:
     image: rabbitmq:management
+    container_name: rabbitmq
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -17,6 +18,8 @@ services:
       retries: 5
     networks:
       - crack_hash_fault_tolerance_net
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
 
   rabbitmq_setup_tasks:
     image: rabbitmq:management
@@ -103,7 +106,7 @@ services:
 
   manager:
     build:
-      context: ./crack-hash-manager/
+      context: ./crack-hash-fault-tolerance-manager/
       dockerfile: ./Dockerfile
     deploy:
       replicas: 1
@@ -121,10 +124,12 @@ services:
 
   worker_1:
     build:
-      context: ./crack-hash-worker/
+      context: ./crack-hash-fault-tolerance-worker/
       dockerfile: ./Dockerfile
     deploy:
       replicas: 1
+    env_file:
+      ./.env
     environment:
       MANAGER_ADDRESS: manager:${MANAGER_PORT}
       WORKER_GOROUTINE_COUNT: 2
@@ -140,10 +145,12 @@ services:
 
   worker_2:
     build:
-      context: ./crack-hash-worker/
+      context: ./crack-hash-fault-tolerance-worker/
       dockerfile: ./Dockerfile
     deploy:
       replicas: 1
+    env_file:
+      ./.env
     environment:
       MANAGER_ADDRESS: manager:${MANAGER_PORT}
       WORKER_GOROUTINE_COUNT: 2
@@ -159,10 +166,12 @@ services:
 
   worker_3:
     build:
-      context: ./crack-hash-worker/
+      context: ./crack-hash-fault-tolerance-worker/
       dockerfile: ./Dockerfile
     deploy:
       replicas: 1
+    env_file:
+      ./.env
     environment:
       MANAGER_ADDRESS: manager:${MANAGER_PORT}
       WORKER_GOROUTINE_COUNT: 2
@@ -178,10 +187,12 @@ services:
 
   worker_4:
     build:
-      context: ./crack-hash-worker/
+      context: ./crack-hash-fault-tolerance-worker/
       dockerfile: ./Dockerfile
     deploy:
       replicas: 1
+    env_file:
+      ./.env
     environment:
       MANAGER_ADDRESS: manager:${MANAGER_PORT}
       WORKER_GOROUTINE_COUNT: 2
@@ -204,3 +215,4 @@ volumes:
   mongo1_data:
   mongo2_data:
   mongo3_data:
+  rabbitmq_data:
